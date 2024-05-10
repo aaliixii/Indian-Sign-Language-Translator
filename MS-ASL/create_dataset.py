@@ -32,23 +32,23 @@ def _logs_(logs, name):
     with open(os.path.join(FILE_DIR+'/logs',f'{name}_logs.json'), 'w') as f:
         json.dump(logs, f, indent=2)
 
-def download_videos(dataset):
+def download_videos(dataset, dir):
     log = []
     with open(dataset, 'r') as f_read:
-        videos = json.load(f_read)[:noOfFiles]
+        videos = json.load(f_read)
 
         for i, video in enumerate(tqdm(videos)):
             video['id'] = i
-            log.append({video['id']:fetch_video(video['url'])})
+            log.append({video['id']:fetch_video(video['url'], dir)})
 
     return log
 
-def fetch_video(url:str):
+def fetch_video(url:str, dir):
     try:
         yt = pytube.YouTube(url)
 
         mp4_streams = yt.streams.filter(file_extension='mp4').first()
-        mp4_streams.download(output_path = DATA_DIR)
+        mp4_streams.download(output_path = dir)
         return 'Success'
     
     except pytube.exceptions.VideoPrivate:
@@ -61,14 +61,20 @@ def fetch_video(url:str):
         return 'Unknown Failure'
 
 def main():
-    _check_id_(TRAIN_JSON)
-    set_name = 'train'
-
-    if not os.path.isdir(DATA_DIR):
-        os.mkdir(DATA_DIR)
+    datasets = {
+                'val':VAL_JSON,
+                'test':TEST_JSON}
     
-    status_log = download_videos(TRAIN_JSON)
-    _logs_({set_name:status_log}, set_name)
+    for set in datasets:
+        print(set)
+        _check_id_(datasets[set])
+        dir = os.path.join(DATA_DIR, set)
+
+        if not os.path.isdir(dir):
+            os.mkdir(dir)
+        
+        status_log = download_videos(datasets[set], dir)
+        _logs_({set:status_log}, set)
 
 if __name__ == '__main__':
     main()
